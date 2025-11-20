@@ -1,85 +1,104 @@
 import streamlit as st
-import pickle
-import os
-
-@st.cache_resource
-def load_model():
-    # name must match EXACT name of your uploaded file
-    file_name = "student score prediction .pkl"
-
-    if not os.path.exists(file_name):
-        st.error(f"❌ MODEL NOT FOUND: {file_name}\n\n"
-                 f"Make sure the file is uploaded to the same folder as app.py")
-        st.stop()
-
-    with open(file_name, "rb") as f:
-        return pickle.load(f)
-
-model = load_model()
-
-
-import streamlit as st
+import pandas as pd
 import pickle
 import numpy as np
 
-# -------------------------
-# Load Model
-# -------------------------
+# --- 1. Load the Model ---
+# The model file name is taken directly from your prompt.
+MODEL_FILE = 'student score prediction .pkl'
+
 @st.cache_resource
-def load_model():
-    with open("student_score_prediction.pkl", "rb") as f:
-        model = pickle.load(f)
-    return model
+def load_model(file_path):
+    """Loads the pickled model object."""
+    try:
+        with open(file_path, 'rb') as file:
+            model = pickle.load(file)
+        return model
+    except FileNotFoundError:
+        st.error(f"Error: Model file '{file_path}' not found. "
+                 "Please ensure the file is in the same directory as app.py.")
+        st.stop()
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        st.stop()
 
-model = load_model()
+# Load the model
+model = load_model(MODEL_FILE)
 
-# -------------------------
-# Page Style
-# -------------------------
-st.set_page_config(page_title="Students Performance Prediction by Amar M", layout="centered")
+# --- 2. Streamlit UI and Prediction Logic ---
 
-st.markdown("""
-    <h1 style='text-align:center; color:#2E86C1;'>
-    Students Performance Prediction<br>by <b>Amar M</b>
-    </h1>
-""", unsafe_allow_html=True)
+st.title("🎓 Student Score Prediction")
+st.markdown("Predict the final score based on study and submission metrics.")
 
-st.markdown(
-    "<p style='text-align:center;'>Fill in the input values below to get prediction.</p>",
-    unsafe_allow_html=True
+# Define the features based on the model's training data
+# The features are Hours_Studied, Attendance, and Assignments_Submitted 
+st.sidebar.header("Input Features")
+
+# Input field for 'Hours_Studied' (Continuous/Float)
+hours_studied = st.sidebar.number_input(
+    "Hours Studied (per week):", 
+    min_value=0.0, 
+    max_value=100.0, 
+    value=10.0, 
+    step=0.5,
+    help="Average number of hours the student studied."
 )
 
-st.write("---")
+# Input field for 'Attendance' (Percentage/Integer)
+attendance = st.sidebar.slider(
+    "Attendance (%):", 
+    min_value=0, 
+    max_value=100, 
+    value=80, 
+    step=1,
+    help="Student's attendance percentage."
+)
 
-# -------------------------
-# Detect number of required input features
-# -------------------------
-try:
-    num_features = model.n_features_in_
-except:
-    st.error("❌ Could not detect model input size. Please ensure the model is scikit-learn compatible.")
-    st.stop()
+# Input field for 'Assignments_Submitted' (Count/Integer)
+assignments_submitted = st.sidebar.number_input(
+    "Assignments Submitted (out of 10):", 
+    min_value=0, 
+    max_value=10, 
+    value=8, 
+    step=1,
+    help="Number of assignments the student submitted."
+)
 
-# -------------------------
-# Create dynamic inputs
-# -------------------------
-st.subheader("Enter input values")
 
-inputs = []
-cols = st.columns(2)
+# --- Prediction Button and Output ---
+if st.sidebar.button("Predict Score"):
+    # 1. Create a DataFrame for prediction
+    input_data = pd.DataFrame({
+        'Hours_Studied': [hours_studied],
+        'Attendance': [attendance],
+        'Assignments_Submitted': [assignments_submitted]
+    })
+    
+    # Display the input data (optional)
+    st.subheader("Input Provided:")
+    st.dataframe(input_data)
 
-for i in range(num_features):
-    col = cols[i % 2]
-    val = col.number_input(f"Feature {i+1}", value=0.0)
-    inputs.append(val)
-
-# -------------------------
-# Predict
-# -------------------------
-if st.button("Predict"):
+    # 2. Make the prediction
     try:
-        input_array = np.array([inputs])
-        result = model.predict(input_array)
-        st.success(f"🎯 Predicted Result: **{result[0]}**")
+        prediction = model.predict(input_data)[0]
+        
+        # 3. Display the result
+        st.success(f"**Predicted Final Score:**")
+        st.balloons()
+        
+        # Format the prediction to one decimal place
+        st.metric(label="Predicted Score (0-100)", value=f"{prediction:.1f}")
+
+        # Optional: Display Model Coefficients for insight
+        st.markdown("---")
+        st.subheader("Model Insights (Coefficients)")
+        # Extract and display the coefficients and intercept from the loaded model
+        coefficients = pd.DataFrame({
+            'Feature': model.feature_names_in_,
+            'Coefficient': model.coef_
+        })
+        st.dataframe(coefficients)
+        st.caption(f"Intercept: {model.intercept_:.4f}")
+        
     except Exception as e:
-        st.error(f"Error while predicting: {e}")
+        st.error(f"An error occurred during prediction: {e}")
