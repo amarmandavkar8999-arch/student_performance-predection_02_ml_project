@@ -1,5 +1,25 @@
 import streamlit as st
 import pickle
+import os
+
+@st.cache_resource
+def load_model():
+    # name must match EXACT name of your uploaded file
+    file_name = "student score prediction .pkl"
+
+    if not os.path.exists(file_name):
+        st.error(f"❌ MODEL NOT FOUND: {file_name}\n\n"
+                 f"Make sure the file is uploaded to the same folder as app.py")
+        st.stop()
+
+    with open(file_name, "rb") as f:
+        return pickle.load(f)
+
+model = load_model()
+
+
+import streamlit as st
+import pickle
 import numpy as np
 
 # -------------------------
