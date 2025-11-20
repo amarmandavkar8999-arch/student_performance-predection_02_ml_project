@@ -27,7 +27,7 @@ model = load_model(MODEL_FILE)
 
 # --- 2. Streamlit UI and Prediction Logic ---
 
-st.title("🎓 Student Score Prediction")
+st.title("🎓 Student Score Prediction by Amar M")
 st.markdown("Predict the final score based on study and submission metrics.")
 
 # Define the features based on the model's training data
