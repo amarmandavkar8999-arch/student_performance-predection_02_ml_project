@@ -1,4 +1,4 @@
 streamlit
-numpy
+scikit-learn==1.6.1  # Important to match the version the model was trained/pickled with 
 pandas
-scikit-learn
+numpy
